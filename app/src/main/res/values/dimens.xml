@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="k2c_spacing_xs">8dp</dimen>
+    <dimen name="k2c_spacing_s">12dp</dimen>
+    <dimen name="k2c_spacing_m">16dp</dimen>
+    <dimen name="k2c_spacing_l">24dp</dimen>
+
+    <dimen name="k2c_radius_m">12dp</dimen>
+    <dimen name="k2c_radius_l">16dp</dimen>
+</resources>

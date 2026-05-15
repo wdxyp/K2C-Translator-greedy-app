@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="k2c_primary">#FF9BB3FF</color>
+    <color name="k2c_primary_variant">#FF6E8BFF</color>
+    <color name="k2c_on_primary">#FF0B1A3C</color>
+
+    <color name="k2c_secondary">#FF87D9FF</color>
+    <color name="k2c_secondary_variant">#FF3FBEEB</color>
+    <color name="k2c_on_secondary">#FF00202B</color>
+
+    <color name="k2c_background">#FF121318</color>
+    <color name="k2c_surface">#FF1B1B1F</color>
+    <color name="k2c_on_background">#FFE4E1E6</color>
+    <color name="k2c_on_surface">#FFE4E1E6</color>
+    <color name="k2c_on_surface_muted">#99E4E1E6</color>
+
+    <color name="k2c_outline">#33E4E1E6</color>
+    <color name="k2c_outline_strong">#66E4E1E6</color>
+    <color name="k2c_outline_input">#99E4E1E6</color>
+
+    <color name="k2c_error">#FFFFB4AB</color>
+    <color name="k2c_on_error">#FF690005</color>
+</resources>

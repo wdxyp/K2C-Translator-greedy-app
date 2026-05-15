@@ -1,0 +1,48 @@
+<resources>
+    <string name="app_name">K2C Translator</string>
+    <string name="nav_translate">翻译</string>
+    <string name="nav_dict">词典</string>
+    <string name="nav_stats">统计</string>
+
+    <string name="hint_input">输入韩文 / 混排文本</string>
+    <string name="action_translate">翻译</string>
+    <string name="action_copy">复制结果</string>
+    <string name="label_output">译文</string>
+    <string name="label_input">原文</string>
+    <string name="action_help">使用说明</string>
+
+    <string name="dict_title">编辑 user_dict.md</string>
+    <string name="dict_hint">词典内容（UTF-8）</string>
+    <string name="action_save">保存</string>
+    <string name="action_reset">恢复默认</string>
+    <string name="action_edit">编辑</string>
+    <string name="action_import_dict_file">导入词典文件</string>
+    <string name="action_download_dict">下载词典文件</string>
+
+    <string name="stats_title">统计与履历</string>
+    <string name="stats_placeholder">开发中：将展示翻译履历、字数与耗时统计，并支持 CSV 导出。</string>
+    <string name="action_model_update">模型更新</string>
+    <string name="action_export_csv">导出 CSV</string>
+    <string name="action_clear_logs">清空记录</string>
+    <string name="action_sync_cloud">同步到云端</string>
+
+    <string name="model_update_title">模型更新</string>
+    <string name="model_update_placeholder">开发中：将支持导入模型包 zip、检查更新、切换与回滚。</string>
+    <string name="action_import_model_zip">导入模型包 ZIP</string>
+    <string name="action_reset_builtin">恢复内置模型</string>
+    <string name="action_check_latest">检查云端最新模型</string>
+    <string name="action_download_install_latest">下载并安装最新模型</string>
+
+    <string name="login_hint">支持本机离线账号，或 Supabase 邮箱账号</string>
+    <string name="login_email_or_username">邮箱 / 用户名</string>
+    <string name="login_password">密码</string>
+    <string name="action_login_local">离线登录</string>
+    <string name="action_register_local">离线注册</string>
+    <string name="action_login_cloud">邮箱登录</string>
+    <string name="action_register_cloud">邮箱注册</string>
+    <string name="action_logout">退出登录</string>
+
+    <string name="section_local_account">离线账号</string>
+    <string name="section_cloud_account">邮箱账号（云端）</string>
+    <string name="action_back">返回</string>
+</resources>

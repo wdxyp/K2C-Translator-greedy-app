@@ -1,0 +1,25 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+release_apks/
+.externalNativeBuild
+.cxx
+local.properties
+
+# Large local model/bundles (do not commit)
+model_bundle_*.zip
+/Translate Model/
+/app/src/debug/assets/translator/*.ptl
+/app/release/
+
+# IDE / local logs
+.kotlin/

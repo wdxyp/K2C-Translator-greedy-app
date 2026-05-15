@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="@dimen/k2c_spacing_m">
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/dictStatusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/k2c_spacing_m"
+            android:text="@string/dict_title"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.K2CTranslator.TextInputLayout.Strong"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/k2c_spacing_m"
+        android:layout_weight="1"
+        android:hint="@string/dict_hint">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/dictContentText"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="top|start"
+            android:inputType="textMultiLine"
+            android:minLines="12" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/k2c_spacing_m"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dictEditButton"
+            style="@style/Widget.K2CTranslator.Button.Outlined"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/action_edit" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dictSaveButton"
+            android:layout_marginStart="@dimen/k2c_spacing_s"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/action_save" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dictResetButton"
+            style="@style/Widget.K2CTranslator.Button.Outlined"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/k2c_spacing_s"
+            android:layout_weight="1"
+            android:text="@string/action_reset" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/k2c_spacing_s"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dictImportButton"
+            style="@style/Widget.K2CTranslator.Button.Outlined"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/action_import_dict_file" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dictDownloadButton"
+            android:layout_marginStart="@dimen/k2c_spacing_s"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/action_download_dict" />
+    </LinearLayout>
+</LinearLayout>

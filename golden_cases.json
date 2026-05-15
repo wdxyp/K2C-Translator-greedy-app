@@ -1,0 +1,64 @@
+{
+  "meta": {
+    "script": "D:\\pythonproject 2\\Android APP\\实时翻译测试_V3.0(greedy).py",
+    "model": "D:\\pythonproject 2\\Android APP\\Translate Model\\best_model_v3_attn.pth",
+    "ko_vocab": "D:\\pythonproject 2\\Android APP\\Translate Model\\best_ko_vocab_v3_attn.pkl",
+    "zh_vocab": "D:\\pythonproject 2\\Android APP\\Translate Model\\best_zh_vocab_v3_attn.pkl",
+    "user_dict": "D:\\pythonproject 2\\Android APP\\user_dict.md",
+    "count": 13
+  },
+  "cases": [
+    {
+      "input": "안녕하세요",
+      "output": "你好"
+    },
+    {
+      "input": "이것은 테스트입니다",
+      "output": "<unk> <unk>"
+    },
+    {
+      "input": "이것은(테스트)입니다",
+      "output": "<unk>(测试)<unk>"
+    },
+    {
+      "input": "이것은（테스트）입니다",
+      "output": "<unk>（测试）<unk>"
+    },
+    {
+      "input": "100% 완료",
+      "output": "100% 完成"
+    },
+    {
+      "input": "ABC_01/TEST",
+      "output": "ABC_01/TEST"
+    },
+    {
+      "input": "한국어를 번역합니다",
+      "output": "韩语<unk> <unk>"
+    },
+    {
+      "input": "이의는 없습니다",
+      "output": "<unk><unk> 没有"
+    },
+    {
+      "input": "이것을 처리해 주세요",
+      "output": "<unk> <unk> 请"
+    },
+    {
+      "input": "업데이트를 완료했습니다",
+      "output": "更新<unk> <unk>"
+    },
+    {
+      "input": "버전(3.0) 테스트",
+      "output": "版本(3.0) 测试"
+    },
+    {
+      "input": "（123） 괄호 유지",
+      "output": "（123） <unk> 维护"
+    },
+    {
+      "input": "(123) parentheses keep",
+      "output": "(123) parentheses keep"
+    }
+  ]
+}

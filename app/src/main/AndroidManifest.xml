@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:name=".K2CApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.K2CTranslator">
+        <activity
+            android:name=".LoginActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.K2CTranslator">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.K2CTranslator"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ModelUpdateActivity"
+            android:exported="false"
+            android:label="@string/model_update_title"
+            android:theme="@style/Theme.K2CTranslator" />
+        <activity
+            android:name=".modelupdate.ModelDownloadPromptActivity"
+            android:exported="false"
+            android:theme="@style/Theme.K2CTranslator" />
+        <activity
+            android:name=".UserDictEditorActivity"
+            android:exported="false"
+            android:label="@string/dict_title"
+            android:theme="@style/Theme.K2CTranslator" />
+
+        <receiver
+            android:name=".modelupdate.ModelDownloadReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>

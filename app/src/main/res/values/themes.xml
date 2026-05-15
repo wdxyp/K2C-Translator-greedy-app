@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.K2CTranslator" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/k2c_primary</item>
+        <item name="colorPrimaryVariant">@color/k2c_primary_variant</item>
+        <item name="colorOnPrimary">@color/k2c_on_primary</item>
+
+        <item name="colorSecondary">@color/k2c_secondary</item>
+        <item name="colorSecondaryVariant">@color/k2c_secondary_variant</item>
+        <item name="colorOnSecondary">@color/k2c_on_secondary</item>
+
+        <item name="android:colorBackground">@color/k2c_background</item>
+        <item name="colorOnBackground">@color/k2c_on_background</item>
+
+        <item name="colorSurface">@color/k2c_surface</item>
+        <item name="colorOnSurface">@color/k2c_on_surface</item>
+
+        <item name="colorError">@color/k2c_error</item>
+        <item name="colorOnError">@color/k2c_on_error</item>
+
+        <item name="android:windowBackground">@color/k2c_background</item>
+        <item name="android:statusBarColor">@color/k2c_surface</item>
+        <item name="android:navigationBarColor">@color/k2c_surface</item>
+
+        <item name="materialButtonStyle">@style/Widget.K2CTranslator.Button</item>
+        <item name="textInputStyle">@style/Widget.K2CTranslator.TextInputLayout</item>
+        <item name="materialCardViewStyle">@style/Widget.K2CTranslator.Card</item>
+        <item name="toolbarStyle">@style/Widget.K2CTranslator.Toolbar</item>
+        <item name="bottomNavigationStyle">@style/Widget.K2CTranslator.BottomNav</item>
+    </style>
+
+    <style name="Widget.K2CTranslator.Toolbar" parent="Widget.MaterialComponents.Toolbar">
+        <item name="android:background">?attr/colorSurface</item>
+        <item name="titleTextColor">?attr/colorOnSurface</item>
+        <item name="subtitleTextColor">@color/k2c_on_surface_muted</item>
+    </style>
+
+    <style name="Widget.K2CTranslator.BottomNav" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="android:background">?attr/colorSurface</item>
+        <item name="itemIconTint">@color/bottom_nav_item</item>
+        <item name="itemTextColor">@color/bottom_nav_item</item>
+        <item name="itemRippleColor">@color/k2c_outline</item>
+    </style>
+
+    <style name="Widget.K2CTranslator.Card" parent="Widget.MaterialComponents.CardView">
+        <item name="cardCornerRadius">@dimen/k2c_radius_l</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/k2c_outline</item>
+    </style>
+
+    <style name="Widget.K2CTranslator.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/k2c_surface</item>
+        <item name="boxStrokeColor">@color/k2c_outline</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
+        <item name="boxCornerRadiusTopStart">@dimen/k2c_radius_m</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/k2c_radius_m</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/k2c_radius_m</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/k2c_radius_m</item>
+    </style>
+
+    <style name="Widget.K2CTranslator.TextInputLayout.Strong" parent="Widget.K2CTranslator.TextInputLayout">
+        <item name="boxStrokeColor">@color/k2c_outline_input</item>
+    </style>
+
+    <style name="Widget.K2CTranslator.Button" parent="Widget.MaterialComponents.Button">
+        <item name="cornerRadius">@dimen/k2c_radius_m</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+    </style>
+
+    <style name="Widget.K2CTranslator.Button.Outlined" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="cornerRadius">@dimen/k2c_radius_m</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+    </style>
+</resources>

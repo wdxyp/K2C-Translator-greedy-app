@@ -40,6 +40,7 @@
     <string name="action_register_local">离线注册</string>
     <string name="action_login_cloud">邮箱登录</string>
     <string name="action_register_cloud">邮箱注册</string>
+    <string name="action_check_app_update">检查更新</string>
     <string name="action_logout">退出登录</string>
 
     <string name="section_local_account">离线账号</string>

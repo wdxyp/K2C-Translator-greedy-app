@@ -7,6 +7,7 @@ import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.example.k2ctranslator.appupdate.AppUpdateChecker
 import com.example.k2ctranslator.auth.AuthStore
 import com.example.k2ctranslator.supabase.SupabaseAuth
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +23,7 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var registerButton: Button
     private lateinit var cloudLoginButton: Button
     private lateinit var cloudRegisterButton: Button
+    private lateinit var checkAppUpdateButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +37,7 @@ class LoginActivity : AppCompatActivity() {
         registerButton = findViewById(R.id.registerButton)
         cloudLoginButton = findViewById(R.id.cloudLoginButton)
         cloudRegisterButton = findViewById(R.id.cloudRegisterButton)
+        checkAppUpdateButton = findViewById(R.id.checkAppUpdateButton)
 
         titleView.text = "${getString(R.string.app_name)}  v${BuildConfig.VERSION_NAME}"
 
@@ -53,6 +56,9 @@ class LoginActivity : AppCompatActivity() {
         registerButton.setOnClickListener { onRegister() }
         cloudLoginButton.setOnClickListener { onCloudLogin() }
         cloudRegisterButton.setOnClickListener { onCloudRegister() }
+        checkAppUpdateButton.setOnClickListener {
+            AppUpdateChecker.checkAndPrompt(this, force = true, showUpToDate = true)
+        }
     }
 
     private fun onLogin() {

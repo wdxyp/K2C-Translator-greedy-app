@@ -3,11 +3,12 @@ plugins {
 }
 
 import java.util.Properties
+import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-val appVersionCode = 2
-val appVersionName = "1.0.1"
+val appVersionCode = 3
+val appVersionName = "1.0.2"
 
 fun buildConfigString(value: String): String {
     val v = value.replace("\\", "\\\\").replace("\"", "\\\"")
@@ -37,6 +38,14 @@ val modelLatestJsonUrl = providers.gradleProperty("MODEL_LATEST_JSON_URL")
     .get()
 val appLatestJsonUrl = providers.gradleProperty("APP_LATEST_JSON_URL")
     .orElse("https://raw.githubusercontent.com/wdxyp/K2C-Translator-greedy-app/main/app_latest.json")
+    .get()
+
+val appLatestApkUrl = providers.gradleProperty("APP_LATEST_APK_URL")
+    .orElse(localProperty("APP_LATEST_APK_URL") ?: "")
+    .get()
+
+val appLatestNotes = providers.gradleProperty("APP_LATEST_NOTES")
+    .orElse(localProperty("APP_LATEST_NOTES") ?: "")
     .get()
 
 android {
@@ -137,7 +146,7 @@ val archiveArm64ReleaseApk = tasks.register("archiveArm64ReleaseApk") {
 
         val ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
         val dstDir = rootProject.layout.projectDirectory.dir("release_apks").asFile.apply { mkdirs() }
-        val dst = java.io.File(dstDir, "${releaseAppName}_${appVersionName}_${ts}.apk")
+        val dst = File(dstDir, "${releaseAppName}_${appVersionName}_${ts}.apk")
 
         apks.maxBy { it.lastModified() }.copyTo(dst, overwrite = false)
         println("Archived: ${dst.absolutePath}")
@@ -149,6 +158,29 @@ tasks.matching { it.name == "assembleRelease" || it.name == "packageRelease" }.c
         outputs.upToDateWhen { false }
     }
     finalizedBy(archiveArm64ReleaseApk)
+}
+
+val updateAppLatestJson = tasks.register("updateAppLatestJson") {
+    group = "release"
+    description = "Updates root app_latest.json from Gradle version values."
+
+    doLast {
+        val f = rootProject.file("app_latest.json")
+        val json = """
+            {
+              "versionCode": $appVersionCode,
+              "versionName": "$appVersionName",
+              "apkUrl": "${appLatestApkUrl.replace("\\", "\\\\").replace("\"", "\\\"")}",
+              "notes": "${appLatestNotes.replace("\\", "\\\\").replace("\"", "\\\"")}"
+            }
+        """.trimIndent() + "\n"
+        f.writeText(json, Charsets.UTF_8)
+        println("Updated: ${f.absolutePath}")
+    }
+}
+
+tasks.matching { it.name == "assembleRelease" || it.name == "packageRelease" }.configureEach {
+    finalizedBy(updateAppLatestJson)
 }
 
 dependencies {

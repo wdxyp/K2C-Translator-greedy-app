@@ -124,6 +124,14 @@
                         android:layout_weight="1"
                         android:text="@string/action_register_cloud" />
                 </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/checkAppUpdateButton"
+                    style="@style/Widget.K2CTranslator.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/k2c_spacing_m"
+                    android:text="@string/action_check_app_update" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>

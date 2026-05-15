@@ -12,12 +12,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 object AppUpdateChecker {
-    fun checkAndPrompt(activity: AppCompatActivity) {
+    fun checkAndPrompt(
+        activity: AppCompatActivity,
+        force: Boolean = false,
+        showUpToDate: Boolean = false,
+    ) {
         val prefs = activity.getSharedPreferences("app_update", Context.MODE_PRIVATE)
-        val lastCheckDay = prefs.getString("last_check_day", "")
-        val today = java.time.LocalDate.now().toString()
-        if (lastCheckDay == today) return
-        prefs.edit().putString("last_check_day", today).apply()
+        if (!force) {
+            val lastCheckDay = prefs.getString("last_check_day", "")
+            val today = java.time.LocalDate.now().toString()
+            if (lastCheckDay == today) return
+            prefs.edit().putString("last_check_day", today).apply()
+        }
 
         activity.lifecycleScope.launch {
             val latest = withContext(Dispatchers.IO) {
@@ -26,9 +32,37 @@ object AppUpdateChecker {
                 } catch (_: Throwable) {
                     null
                 }
-            } ?: return@launch
+            }
+            if (latest == null) {
+                if (force) {
+                    AlertDialog.Builder(activity)
+                        .setTitle("检查失败")
+                        .setMessage("无法获取最新版本信息，请稍后再试。")
+                        .setPositiveButton("确定", null)
+                        .show()
+                }
+                return@launch
+            }
 
-            if (latest.versionCode <= BuildConfig.VERSION_CODE) return@launch
+            if (latest.versionCode <= BuildConfig.VERSION_CODE) {
+                if (showUpToDate) {
+                    val msg = buildString {
+                        append("已经是最新版本。\n\n")
+                        append("当前：v${BuildConfig.VERSION_NAME}\n")
+                        if (latest.versionName.isNotBlank()) append("最新：v${latest.versionName}\n")
+                        if (latest.notes.isNotBlank()) {
+                            append("\n")
+                            append(latest.notes)
+                        }
+                    }
+                    AlertDialog.Builder(activity)
+                        .setTitle("版本检查")
+                        .setMessage(msg)
+                        .setPositiveButton("确定", null)
+                        .show()
+                }
+                return@launch
+            }
 
             val msg = buildString {
                 append("版本更新了请下载。\n\n")
@@ -58,4 +92,3 @@ object AppUpdateChecker {
         context.startActivity(intent)
     }
 }
-

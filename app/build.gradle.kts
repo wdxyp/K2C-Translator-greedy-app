@@ -41,11 +41,14 @@ val appLatestJsonUrl = providers.gradleProperty("APP_LATEST_JSON_URL")
     .get()
 
 val appLatestApkUrl = providers.gradleProperty("APP_LATEST_APK_URL")
-    .orElse(localProperty("APP_LATEST_APK_URL") ?: "")
+    .orElse(
+        localProperty("APP_LATEST_APK_URL")
+            ?: "https://github.com/wdxyp/K2C-Translator-greedy-app/releases/latest/download/app-arm64-v8a-release.apk"
+    )
     .get()
 
 val appLatestNotes = providers.gradleProperty("APP_LATEST_NOTES")
-    .orElse(localProperty("APP_LATEST_NOTES") ?: "")
+    .orElse(localProperty("APP_LATEST_NOTES") ?: "V$appVersionName")
     .get()
 
 android {

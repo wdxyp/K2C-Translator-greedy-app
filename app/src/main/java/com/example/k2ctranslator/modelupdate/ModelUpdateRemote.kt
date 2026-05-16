@@ -30,27 +30,50 @@ object ModelUpdateRemote {
     fun downloadZip(cacheDir: File, zipUrl: String): Pair<File?, String?> {
         val url = zipUrl.trim()
         val isDrive = url.contains("drive.google.com", ignoreCase = true) || url.contains("drive.usercontent.google.com", ignoreCase = true)
-        val (code, bytes) = if (isDrive) {
-            GoogleDriveDownloader.download(url)
+        val out = File(cacheDir, "download_model_bundle.zip")
+        if (out.exists()) out.delete()
+
+        val (code, contentType, previewBytes) = if (isDrive) {
+            val r = GoogleDriveDownloader.downloadToFile(url, out)
+            Triple(r.code, r.contentType, r.previewBytes)
         } else {
-            HttpJson.download(url)
+            val (c, ct) = HttpJson.downloadToFile(url, out)
+            Triple(c, ct, null)
         }
-        if (code !in 200..299) return Pair(null, "下载失败（${code}）")
-        if (bytes.size < 4 || bytes[0] != 'P'.code.toByte() || bytes[1] != 'K'.code.toByte()) {
+        if (code !in 200..299) {
+            if (out.exists()) out.delete()
+            return Pair(null, "下载失败（$code）")
+        }
+
+        val sig = try {
+            out.inputStream().use { ins ->
+                val b = ByteArray(2)
+                val n = ins.read(b)
+                if (n < 2) ByteArray(0) else b
+            }
+        } catch (_: Throwable) {
+            ByteArray(0)
+        }
+        if (sig.size < 2 || sig[0] != 'P'.code.toByte() || sig[1] != 'K'.code.toByte()) {
             val preview = try {
-                bytes.copyOfRange(0, minOf(bytes.size, 400)).toString(Charsets.UTF_8)
+                val bytes = previewBytes
+                    ?: out.inputStream().use { ins -> ins.readNBytes(400) }
+                bytes.toString(Charsets.UTF_8)
             } catch (_: Throwable) {
                 ""
             }
-            val hint = if (preview.contains("Google Drive", ignoreCase = true) || preview.contains("drive.google.com", ignoreCase = true)) {
+            if (out.exists()) out.delete()
+            val hint = if (contentType.contains("text/html", ignoreCase = true) ||
+                preview.contains("Google Drive", ignoreCase = true) ||
+                preview.contains("drive.google.com", ignoreCase = true)
+            ) {
                 "下载返回的不是 ZIP（疑似 Drive 确认页/权限页）。请把该文件分享权限设为“任何拥有链接的人可查看”，并重试。"
             } else {
-                "下载返回的不是 ZIP（长度=${bytes.size}）。"
+                "下载返回的不是 ZIP。"
             }
             return Pair(null, hint)
         }
-        val out = File(cacheDir, "download_model_bundle.zip")
-        out.outputStream().use { it.write(bytes) }
+
         return Pair(out, null)
     }
 

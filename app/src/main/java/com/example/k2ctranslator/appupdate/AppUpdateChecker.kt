@@ -77,10 +77,41 @@ object AppUpdateChecker {
                 .setTitle("发现新版本")
                 .setMessage(msg)
                 .setPositiveButton("下载") { _, _ ->
-                    openUrl(activity, latest.apkUrl)
+                    downloadAndInstall(activity, latest)
                 }
                 .setNegativeButton("取消", null)
                 .show()
+        }
+    }
+
+    private fun downloadAndInstall(activity: AppCompatActivity, latest: AppLatest) {
+        val waiting = AlertDialog.Builder(activity)
+            .setTitle("下载中…")
+            .setMessage("请稍候")
+            .setCancelable(false)
+            .show()
+        activity.lifecycleScope.launch {
+            val r = withContext(Dispatchers.IO) {
+                AppApkDownloader.downloadToCache(activity, latest.apkUrl, latest.versionCode, latest.versionName)
+            }
+            waiting.dismiss()
+            if (!r.ok || r.file == null) {
+                AlertDialog.Builder(activity)
+                    .setTitle("下载失败")
+                    .setMessage(r.message)
+                    .setPositiveButton("确定", null)
+                    .show()
+                return@launch
+            }
+            try {
+                AppApkInstaller.installFromFile(activity, r.file)
+            } catch (t: Throwable) {
+                AlertDialog.Builder(activity)
+                    .setTitle("打开安装器失败")
+                    .setMessage("${t::class.java.simpleName}${t.message?.let { ": $it" } ?: ""}")
+                    .setPositiveButton("确定", null)
+                    .show()
+            }
         }
     }
 

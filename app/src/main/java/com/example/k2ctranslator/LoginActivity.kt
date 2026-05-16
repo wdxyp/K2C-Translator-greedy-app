@@ -39,6 +39,7 @@ class LoginActivity : AppCompatActivity() {
         cloudRegisterButton = findViewById(R.id.cloudRegisterButton)
         checkAppUpdateButton = findViewById(R.id.checkAppUpdateButton)
 
+        titleView.isSaveEnabled = false
         titleView.text = "${getString(R.string.app_name)}  v${BuildConfig.VERSION_NAME}"
 
         val cloud = SupabaseAuth.currentSession(this)
@@ -59,6 +60,11 @@ class LoginActivity : AppCompatActivity() {
         checkAppUpdateButton.setOnClickListener {
             AppUpdateChecker.checkAndPrompt(this, force = true, showUpToDate = true)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        titleView.text = "${getString(R.string.app_name)}  v${BuildConfig.VERSION_NAME}"
     }
 
     private fun onLogin() {

@@ -2,11 +2,13 @@ package com.example.k2ctranslator
 
 import android.net.Uri
 import android.os.Bundle
+import android.view.ViewTreeObserver
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.k2ctranslator.supabase.SupabaseUserDictSync
@@ -27,11 +29,40 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
     private lateinit var downloadButton: Button
     private var editable: Boolean = false
     private var lastSyncedSha: String? = null
+    private var pendingExportText: String? = null
+    private var globalLayoutListener: ViewTreeObserver.OnGlobalLayoutListener? = null
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@registerForActivityResult
         viewLifecycleOwner.lifecycleScope.launch {
             importDictFile(uri)
+        }
+    }
+
+    private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { uri ->
+        if (uri == null) {
+            pendingExportText = null
+            setLoadingState(false, "已取消")
+            return@registerForActivityResult
+        }
+        val text = pendingExportText
+        pendingExportText = null
+        if (text == null) {
+            setLoadingState(false, "导出失败：无内容")
+            return@registerForActivityResult
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            setLoadingState(true, "导出中…")
+            try {
+                withContext(Dispatchers.IO) {
+                    val bytes = text.toByteArray(Charsets.UTF_8)
+                    requireContext().contentResolver.openOutputStream(uri, "w")?.use { it.write(bytes) }
+                        ?: throw IllegalStateException("无法写入文件")
+                }
+                setLoadingState(false, "已导出词典文件")
+            } catch (t: Throwable) {
+                setLoadingState(false, "导出失败：${t::class.java.simpleName}${t.message?.let { ": $it" } ?: ""}")
+            }
         }
     }
 
@@ -50,7 +81,19 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
         saveButton.setOnClickListener { onSave() }
         resetButton.setOnClickListener { onReset() }
         importButton.setOnClickListener { importLauncher.launch(arrayOf("text/markdown", "text/plain", "application/octet-stream")) }
-        downloadButton.setOnClickListener { syncFromCloud(force = true) }
+        downloadButton.setOnClickListener { exportLatestDictAsFile() }
+
+        contentView.doAfterTextChanged {
+            if (editable) ensureCursorVisible()
+        }
+        contentView.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && editable) ensureCursorVisible()
+        }
+        globalLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
+            if (editable) ensureCursorVisible()
+        }.also { l ->
+            view.viewTreeObserver.addOnGlobalLayoutListener(l)
+        }
 
         setLoadingState(true, "正在加载词典…")
         viewLifecycleOwner.lifecycleScope.launch {
@@ -102,6 +145,15 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
     override fun onResume() {
         super.onResume()
         syncFromCloud(force = false)
+    }
+
+    override fun onDestroyView() {
+        globalLayoutListener?.let { l ->
+            view?.viewTreeObserver?.removeOnGlobalLayoutListener(l)
+        }
+        globalLayoutListener = null
+        pendingExportText = null
+        super.onDestroyView()
     }
 
     private fun onSave() {
@@ -235,5 +287,30 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
             sb.append("0123456789abcdef"[v and 0x0F])
         }
         return sb.toString()
+    }
+
+    private fun ensureCursorVisible() {
+        val pos = contentView.selectionStart.coerceAtLeast(0)
+        contentView.post {
+            try {
+                contentView.bringPointIntoView(pos)
+            } catch (_: Throwable) {
+            }
+        }
+    }
+
+    private fun exportLatestDictAsFile() {
+        if (editable) return
+        setLoadingState(true, "准备导出…")
+        viewLifecycleOwner.lifecycleScope.launch {
+            val (cloudContent, r) = withContext(Dispatchers.IO) { SupabaseUserDictSync.download(requireContext()) }
+            val text = if (r.ok && cloudContent != null) {
+                cloudContent
+            } else {
+                contentView.text?.toString().orEmpty()
+            }
+            pendingExportText = text
+            exportLauncher.launch("user_dict.md")
+        }
     }
 }

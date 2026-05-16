@@ -7,6 +7,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 data class LogSyncResult(val ok: Boolean, val message: String, val uploaded: Int = 0)
+data class LogExportResult(val ok: Boolean, val message: String, val csvBytes: ByteArray? = null)
 
 object SupabaseLogSync {
     private const val PREF = "supabase_log_sync"
@@ -72,6 +73,67 @@ object SupabaseLogSync {
         return LogSyncResult(true, "同步成功", toUpload.size)
     }
 
+    fun exportCsvRange(context: Context, startMs: Long, endMs: Long): LogExportResult {
+        if (!SupabaseAuth.isConfigured()) return LogExportResult(false, "Supabase 未配置")
+        val session = SupabaseAuth.ensureValidSession(context) ?: return LogExportResult(false, "请先邮箱登录")
+        if (endMs < startMs) return LogExportResult(false, "时间区间不正确")
+
+        val base = BuildConfig.SUPABASE_URL.trim().trimEnd('/') + "/rest/v1/translation_logs"
+        val select = "timestamp_ms,duration_ms,input_chars,output_chars,unk_count,model_version,input_text,output_text"
+        val url =
+            base +
+                "?select=$select" +
+                "&user_id=eq.${session.userId}" +
+                "&timestamp_ms=gte.$startMs" +
+                "&timestamp_ms=lte.$endMs" +
+                "&order=timestamp_ms.asc"
+
+        val headers = mapOf(
+            "apikey" to BuildConfig.SUPABASE_ANON_KEY.trim(),
+            "Authorization" to "Bearer ${session.accessToken}",
+            "Accept" to "application/json",
+        )
+        val res = HttpJson.get(url, headers)
+        if (res.code !in 200..299) {
+            return LogExportResult(false, "获取失败（${res.code}）：${res.body.take(200)}")
+        }
+
+        val arr = try {
+            JSONArray(res.body)
+        } catch (t: Throwable) {
+            return LogExportResult(false, "解析失败：${t::class.java.simpleName}")
+        }
+
+        val sb = StringBuilder()
+        sb.append('\uFEFF')
+        sb.append(
+            "timestamp_ms,duration_ms,input_chars,output_chars,unk_count,model_version,input_text,output_text\n"
+        )
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val ts = o.optLong("timestamp_ms", 0L)
+            val dur = o.optLong("duration_ms", 0L)
+            val inChars = o.optInt("input_chars", 0)
+            val outChars = o.optInt("output_chars", 0)
+            val unk = o.optInt("unk_count", 0)
+            val model = o.optString("model_version", "")
+            val inputText = o.optString("input_text", "")
+            val outputText = o.optString("output_text", "")
+
+            sb.append(ts).append(',')
+            sb.append(dur).append(',')
+            sb.append(inChars).append(',')
+            sb.append(outChars).append(',')
+            sb.append(unk).append(',')
+            sb.append(csvEscape(model)).append(',')
+            sb.append(csvEscape(inputText)).append(',')
+            sb.append(csvEscape(outputText))
+            sb.append('\n')
+        }
+
+        return LogExportResult(true, "OK", sb.toString().toByteArray(Charsets.UTF_8))
+    }
+
     private fun parseCsvLine(line: String): List<String> {
         val out = ArrayList<String>()
         val sb = StringBuilder()
@@ -113,5 +175,12 @@ object SupabaseLogSync {
         }
         out.add(sb.toString())
         return out
+    }
+
+    private fun csvEscape(text: String): String {
+        val t = text.replace("\r\n", "\n").replace("\r", "\n")
+        val needQuotes = t.contains(',') || t.contains('"') || t.contains('\n')
+        val escaped = t.replace("\"", "\"\"")
+        return if (needQuotes) "\"$escaped\"" else escaped
     }
 }

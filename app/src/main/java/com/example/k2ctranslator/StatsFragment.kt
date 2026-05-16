@@ -13,10 +13,14 @@ import com.example.k2ctranslator.auth.AuthStore
 import com.example.k2ctranslator.log.TranslationLogStorage
 import com.example.k2ctranslator.supabase.SupabaseAuth
 import com.example.k2ctranslator.supabase.SupabaseLogSync
+import com.google.android.material.datepicker.MaterialDatePicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -27,14 +31,23 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
     private val dateFmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
         timeZone = TimeZone.getDefault()
     }
+    private var pendingExportRange: Pair<Long, Long>? = null
 
     private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri == null) return@registerForActivityResult
         viewLifecycleOwner.lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-                val bytes = TranslationLogStorage.readAllBytesWithUtf8Bom(requireContext()) ?: return@withContext
+                val range = pendingExportRange
+                val bytes = if (range != null) {
+                    val r = SupabaseLogSync.exportCsvRange(requireContext(), range.first, range.second)
+                    if (!r.ok || r.csvBytes == null) throw IllegalStateException(r.message)
+                    r.csvBytes
+                } else {
+                    TranslationLogStorage.readAllBytesWithUtf8Bom(requireContext()) ?: return@withContext
+                }
                 requireContext().contentResolver.openOutputStream(uri, "w")?.use { it.write(bytes) }
             }
+            pendingExportRange = null
             refresh()
         }
     }
@@ -49,7 +62,40 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
         }
 
         view.findViewById<Button>(R.id.exportCsvButton).setOnClickListener {
-            exportLauncher.launch("k2c_translations.csv")
+            if (!SupabaseAuth.isConfigured()) {
+                summaryView.text = "Supabase 未配置"
+                return@setOnClickListener
+            }
+            if (SupabaseAuth.ensureValidSession(requireContext()) == null) {
+                summaryView.text = "请先邮箱登录"
+                return@setOnClickListener
+            }
+
+            val zone = ZoneId.systemDefault()
+            val endLocal = LocalDate.now(zone)
+            val startLocal = endLocal.minusDays(6)
+            val startMsDefault = startLocal.atStartOfDay(zone).toInstant().toEpochMilli()
+            val endMsDefault = endLocal.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+
+            val picker = MaterialDatePicker.Builder.dateRangePicker()
+                .setTitleText("选择导出时间区间")
+                .setSelection(androidx.core.util.Pair(startMsDefault, endMsDefault))
+                .build()
+            picker.addOnPositiveButtonClickListener { sel ->
+                if (sel == null) return@addOnPositiveButtonClickListener
+                val startMs = sel.first ?: return@addOnPositiveButtonClickListener
+                val endMs = sel.second ?: return@addOnPositiveButtonClickListener
+                pendingExportRange = Pair(startMs, endMs)
+                val fn = buildString {
+                    append("k2c_translations_")
+                    append(LocalDate.ofInstant(Instant.ofEpochMilli(startMs), zone))
+                    append("_")
+                    append(LocalDate.ofInstant(Instant.ofEpochMilli(endMs), zone))
+                    append(".csv")
+                }
+                exportLauncher.launch(fn)
+            }
+            picker.show(parentFragmentManager, "export_csv_range")
         }
 
         view.findViewById<Button>(R.id.clearLogsButton).setOnClickListener {

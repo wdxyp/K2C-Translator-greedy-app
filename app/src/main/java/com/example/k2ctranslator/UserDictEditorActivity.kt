@@ -1,6 +1,11 @@
 package com.example.k2ctranslator
 
+import android.graphics.Rect
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.KeyEvent
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -31,6 +36,27 @@ class UserDictEditorActivity : AppCompatActivity() {
         saveButton.setOnClickListener { onSave() }
         resetButton.setOnClickListener { onReset() }
         backButton.setOnClickListener { finish() }
+        contentView.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) contentView.post { ensureCursorVisible() }
+        }
+        contentView.setOnClickListener { contentView.post { ensureCursorVisible() } }
+        contentView.setOnKeyListener { _, _, event ->
+            if (event.action == KeyEvent.ACTION_UP || event.action == KeyEvent.ACTION_DOWN) {
+                contentView.post { ensureCursorVisible() }
+            }
+            false
+        }
+        contentView.addTextChangedListener(
+            object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+                override fun afterTextChanged(s: Editable?) {
+                    contentView.post { ensureCursorVisible() }
+                }
+            },
+        )
 
         setLoadingState(true, "正在加载词典…")
         lifecycleScope.launch {
@@ -42,6 +68,7 @@ class UserDictEditorActivity : AppCompatActivity() {
                     UserDictStorage.readUserDict(this@UserDictEditorActivity)
                 }
                 contentView.setText(content)
+                contentView.post { ensureCursorVisible() }
                 setLoadingState(false, "就绪")
             } catch (t: Throwable) {
                 setLoadingState(false, "加载失败：${t.message ?: t::class.java.simpleName}")
@@ -81,10 +108,24 @@ class UserDictEditorActivity : AppCompatActivity() {
                     UserDictStorage.readUserDict(this@UserDictEditorActivity)
                 }
                 contentView.setText(content)
+                contentView.post { ensureCursorVisible() }
                 setLoadingState(false, "已恢复默认")
             } catch (t: Throwable) {
                 setLoadingState(false, "恢复失败：${t.message ?: t::class.java.simpleName}")
             }
         }
+    }
+
+    private fun ensureCursorVisible() {
+        val layout = contentView.layout ?: return
+        val w = contentView.width
+        if (w <= 0) return
+        val pos = contentView.selectionStart
+        if (pos < 0) return
+        val line = layout.getLineForOffset(pos)
+        val top = layout.getLineTop(line)
+        val bottom = layout.getLineBottom(line)
+        val rect = Rect(0, top, w, bottom)
+        contentView.requestRectangleOnScreen(rect, true)
     }
 }

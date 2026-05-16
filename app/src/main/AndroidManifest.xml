@@ -45,7 +45,8 @@
             android:name=".UserDictEditorActivity"
             android:exported="false"
             android:label="@string/dict_title"
-            android:theme="@style/Theme.K2CTranslator" />
+            android:theme="@style/Theme.K2CTranslator"
+            android:windowSoftInputMode="adjustResize" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

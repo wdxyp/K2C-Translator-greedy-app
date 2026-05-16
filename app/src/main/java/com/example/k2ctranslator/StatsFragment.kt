@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -39,6 +40,8 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
             withContext(Dispatchers.IO) {
                 val range = pendingExportRange
                 val bytes = if (range != null) {
+                    val session = SupabaseAuth.ensureValidSession(requireContext())
+                        ?: throw IllegalStateException("请先邮箱登录")
                     val r = SupabaseLogSync.exportCsvRange(requireContext(), range.first, range.second)
                     if (!r.ok || r.csvBytes == null) throw IllegalStateException(r.message)
                     r.csvBytes
@@ -71,31 +74,41 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
                 return@setOnClickListener
             }
 
-            val zone = ZoneId.systemDefault()
-            val endLocal = LocalDate.now(zone)
-            val startLocal = endLocal.minusDays(6)
-            val startMsDefault = startLocal.atStartOfDay(zone).toInstant().toEpochMilli()
-            val endMsDefault = endLocal.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+            viewLifecycleOwner.lifecycleScope.launch {
+                summaryView.text = "同步中…"
+                val r = withContext(Dispatchers.IO) { SupabaseLogSync.sync(requireContext()) }
+                summaryView.text = if (r.ok) "同步成功：${r.uploaded} 条" else r.message
 
-            val picker = MaterialDatePicker.Builder.dateRangePicker()
-                .setTitleText("选择导出时间区间")
-                .setSelection(androidx.core.util.Pair(startMsDefault, endMsDefault))
-                .build()
-            picker.addOnPositiveButtonClickListener { sel ->
-                if (sel == null) return@addOnPositiveButtonClickListener
-                val startMs = sel.first ?: return@addOnPositiveButtonClickListener
-                val endMs = sel.second ?: return@addOnPositiveButtonClickListener
-                pendingExportRange = Pair(startMs, endMs)
-                val fn = buildString {
-                    append("k2c_translations_")
-                    append(LocalDate.ofInstant(Instant.ofEpochMilli(startMs), zone))
-                    append("_")
-                    append(LocalDate.ofInstant(Instant.ofEpochMilli(endMs), zone))
-                    append(".csv")
+                val zone = ZoneId.systemDefault()
+                val endLocal = LocalDate.now(zone)
+                val startLocal = endLocal.minusDays(6)
+                val startMsDefault = startLocal.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+                val endMsDefault = endLocal.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+                val picker = MaterialDatePicker.Builder.dateRangePicker()
+                    .setTitleText("选择导出日期区间")
+                    .setSelection(androidx.core.util.Pair(startMsDefault, endMsDefault))
+                    .build()
+                picker.addOnPositiveButtonClickListener { sel ->
+                    if (sel == null) return@addOnPositiveButtonClickListener
+                    val startUtcMs = sel.first ?: return@addOnPositiveButtonClickListener
+                    val endUtcMs = sel.second ?: return@addOnPositiveButtonClickListener
+                    val startDate = Instant.ofEpochMilli(startUtcMs).atZone(ZoneOffset.UTC).toLocalDate()
+                    val endDate = Instant.ofEpochMilli(endUtcMs).atZone(ZoneOffset.UTC).toLocalDate()
+
+                    val startMs = startDate.atStartOfDay(zone).toInstant().toEpochMilli()
+                    val endMs = endDate.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+                    if (endMs < startMs) {
+                        summaryView.text = "日期区间不正确"
+                        return@addOnPositiveButtonClickListener
+                    }
+
+                    pendingExportRange = Pair(startMs, endMs)
+                    val fn = "k2c_translations_${startDate}_${endDate}.csv"
+                    exportLauncher.launch(fn)
                 }
-                exportLauncher.launch(fn)
+                picker.show(parentFragmentManager, "export_csv_range")
             }
-            picker.show(parentFragmentManager, "export_csv_range")
         }
 
         view.findViewById<Button>(R.id.clearLogsButton).setOnClickListener {

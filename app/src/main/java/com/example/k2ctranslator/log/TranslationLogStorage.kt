@@ -110,6 +110,27 @@ object TranslationLogStorage {
         return bom + content
     }
 
+    fun readBytesRangeWithUtf8Bom(context: Context, startMs: Long, endMs: Long): ByteArray? {
+        if (endMs < startMs) return null
+        val f = logFile(context)
+        if (!f.exists()) return null
+        ensureHeader(f)
+        val lines = f.readLines(Charsets.UTF_8)
+        if (lines.isEmpty()) return null
+        val header = if (lines.firstOrNull()?.startsWith("timestamp,") == true) lines.first() else HEADER
+        val data = if (lines.firstOrNull()?.startsWith("timestamp,") == true) lines.drop(1) else lines
+        val sb = StringBuilder()
+        sb.append('\uFEFF')
+        sb.append(header).append('\n')
+        for (ln in data) {
+            val parts = parseCsvLine(ln)
+            val ts = parts.firstOrNull()?.toLongOrNull() ?: continue
+            if (ts < startMs || ts > endMs) continue
+            sb.append(ln).append('\n')
+        }
+        return sb.toString().toByteArray(Charsets.UTF_8)
+    }
+
     fun clear(context: Context) {
         val f = logFile(context)
         if (f.exists()) f.delete()

@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.appbar.MaterialToolbar
@@ -12,7 +13,11 @@ import androidx.appcompat.app.AlertDialog
 import com.example.k2ctranslator.appupdate.AppUpdateChecker
 import com.example.k2ctranslator.auth.AuthStore
 import com.example.k2ctranslator.supabase.SupabaseAuth
+import com.example.k2ctranslator.supabase.SupabaseLogSync
 import com.example.k2ctranslator.translator.EngineProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -98,5 +103,19 @@ class MainActivity : AppCompatActivity() {
         }
 
         AppUpdateChecker.checkAndPrompt(this)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!SupabaseAuth.isConfigured()) return
+        if (SupabaseAuth.ensureValidSession(this) == null) return
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                try {
+                    SupabaseLogSync.sync(this@MainActivity)
+                } catch (_: Throwable) {
+                }
+            }
+        }
     }
 }

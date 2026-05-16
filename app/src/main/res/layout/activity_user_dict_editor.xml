@@ -32,7 +32,10 @@
             android:layout_height="match_parent"
             android:gravity="top|start"
             android:inputType="textMultiLine"
-            android:minLines="12" />
+            android:minLines="12"
+            android:overScrollMode="ifContentScrolls"
+            android:scrollHorizontally="false"
+            android:scrollbars="vertical" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <LinearLayout

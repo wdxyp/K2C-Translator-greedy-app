@@ -11,6 +11,8 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.k2ctranslator.supabase.SupabaseAuth
 import com.example.k2ctranslator.supabase.SupabaseUserDictSync
@@ -32,6 +34,18 @@ class UserDictEditorActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_user_dict_editor)
+
+        val container = findViewById<View>(R.id.rootContainer)
+        val baseLeft = container.paddingLeft
+        val baseTop = container.paddingTop
+        val baseRight = container.paddingRight
+        val baseBottom = container.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(container) { v, insets ->
+            val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(baseLeft, baseTop, baseRight, baseBottom + sys.bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(container)
 
         statusView = findViewById(R.id.dictStatusText)
         contentView = findViewById(R.id.dictContentText)

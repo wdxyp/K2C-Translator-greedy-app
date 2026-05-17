@@ -29,28 +29,51 @@ import java.util.TimeZone
 class StatsFragment : Fragment(R.layout.fragment_stats) {
     private lateinit var summaryView: TextView
     private lateinit var historyView: TextView
+    private lateinit var exportButton: Button
     private val dateFmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
         timeZone = TimeZone.getDefault()
     }
     private var pendingExportRange: Pair<Long, Long>? = null
+    private var exporting: Boolean = false
 
     private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
-        if (uri == null) return@registerForActivityResult
-        viewLifecycleOwner.lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                val range = pendingExportRange
-                val bytes = if (range != null) {
-                    val session = SupabaseAuth.ensureValidSession(requireContext())
-                        ?: throw IllegalStateException("请先邮箱登录")
-                    val r = SupabaseLogSync.exportCsvRange(requireContext(), range.first, range.second)
-                    if (!r.ok || r.csvBytes == null) throw IllegalStateException(r.message)
-                    r.csvBytes
-                } else {
-                    TranslationLogStorage.readAllBytesWithUtf8Bom(requireContext()) ?: return@withContext
-                }
-                requireContext().contentResolver.openOutputStream(uri, "w")?.use { it.write(bytes) }
-            }
+        if (uri == null) {
             pendingExportRange = null
+            setExporting(false)
+            summaryView.text = "已取消导出"
+            return@registerForActivityResult
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val range = pendingExportRange
+                    val bytes = if (range != null) {
+                        val session = SupabaseAuth.ensureValidSession(requireContext())
+                            ?: throw IllegalStateException("请先邮箱登录")
+                        val r = SupabaseLogSync.exportCsvRange(requireContext(), range.first, range.second)
+                        if (!r.ok || r.csvBytes == null) throw IllegalStateException(r.message)
+                        r.csvBytes
+                    } else {
+                        TranslationLogStorage.readAllBytesWithUtf8Bom(requireContext())
+                            ?: ("\uFEFFtimestamp,timestamp_local,duration_ms,input_chars,output_chars,unk_count,model,input_text,output_text\n")
+                                .toByteArray(Charsets.UTF_8)
+                    }
+                    requireContext().contentResolver.openOutputStream(uri, "w")?.use { it.write(bytes) }
+                }
+                summaryView.text = "已导出 CSV"
+            } catch (t: Throwable) {
+                summaryView.text = "导出失败：${t::class.java.simpleName}${t.message?.let { ": $it" } ?: ""}"
+                try {
+                    withContext(Dispatchers.IO) {
+                        val bytes = "\uFEFF导出失败\n".toByteArray(Charsets.UTF_8)
+                        requireContext().contentResolver.openOutputStream(uri, "w")?.use { it.write(bytes) }
+                    }
+                } catch (_: Throwable) {
+                }
+            } finally {
+                pendingExportRange = null
+                setExporting(false)
+            }
             refresh()
         }
     }
@@ -59,61 +82,78 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
         super.onViewCreated(view, savedInstanceState)
         summaryView = view.findViewById(R.id.statsSummaryText)
         historyView = view.findViewById(R.id.statsHistoryText)
+        exportButton = view.findViewById(R.id.exportCsvButton)
 
         view.findViewById<Button>(R.id.openModelUpdateButton).setOnClickListener {
             startActivity(Intent(requireContext(), ModelUpdateActivity::class.java))
         }
 
-        view.findViewById<Button>(R.id.exportCsvButton).setOnClickListener {
+        exportButton.setOnClickListener {
+            if (exporting) return@setOnClickListener
             if (!SupabaseAuth.isConfigured()) {
                 summaryView.text = "Supabase 未配置"
                 return@setOnClickListener
             }
+            setExporting(true)
             viewLifecycleOwner.lifecycleScope.launch {
-                summaryView.text = "同步中…"
-                val session = withContext(Dispatchers.IO) {
-                    try {
-                        SupabaseAuth.ensureValidSession(requireContext())
-                    } catch (_: Throwable) {
-                        null
+                try {
+                    summaryView.text = "同步中…"
+                    val session = withContext(Dispatchers.IO) {
+                        try {
+                            SupabaseAuth.ensureValidSession(requireContext())
+                        } catch (_: Throwable) {
+                            null
+                        }
                     }
-                }
-                if (session == null) {
-                    summaryView.text = "请先邮箱登录"
-                    return@launch
-                }
-                val r = withContext(Dispatchers.IO) { SupabaseLogSync.sync(requireContext()) }
-                summaryView.text = if (r.ok) "同步成功：${r.uploaded} 条" else r.message
-
-                val zone = ZoneId.systemDefault()
-                val endLocal = LocalDate.now(zone)
-                val startLocal = endLocal.minusDays(6)
-                val startMsDefault = startLocal.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-                val endMsDefault = endLocal.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-
-                val picker = MaterialDatePicker.Builder.dateRangePicker()
-                    .setTitleText("选择导出日期区间")
-                    .setSelection(androidx.core.util.Pair(startMsDefault, endMsDefault))
-                    .build()
-                picker.addOnPositiveButtonClickListener { sel ->
-                    if (sel == null) return@addOnPositiveButtonClickListener
-                    val startUtcMs = sel.first ?: return@addOnPositiveButtonClickListener
-                    val endUtcMs = sel.second ?: return@addOnPositiveButtonClickListener
-                    val startDate = Instant.ofEpochMilli(startUtcMs).atZone(ZoneOffset.UTC).toLocalDate()
-                    val endDate = Instant.ofEpochMilli(endUtcMs).atZone(ZoneOffset.UTC).toLocalDate()
-
-                    val startMs = startDate.atStartOfDay(zone).toInstant().toEpochMilli()
-                    val endMs = endDate.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
-                    if (endMs < startMs) {
-                        summaryView.text = "日期区间不正确"
-                        return@addOnPositiveButtonClickListener
+                    if (session == null) {
+                        summaryView.text = "请先邮箱登录"
+                        return@launch
                     }
+                    val r = withContext(Dispatchers.IO) { SupabaseLogSync.sync(requireContext()) }
+                    summaryView.text = if (r.ok) "同步成功：${r.uploaded} 条" else r.message
 
-                    pendingExportRange = Pair(startMs, endMs)
-                    val fn = "k2c_translations_${startDate}_${endDate}.csv"
-                    exportLauncher.launch(fn)
+                    val zone = ZoneId.systemDefault()
+                    val endLocal = LocalDate.now(zone)
+                    val startLocal = endLocal.minusDays(6)
+                    val startMsDefault = startLocal.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+                    val endMsDefault = endLocal.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+                    val picker = MaterialDatePicker.Builder.dateRangePicker()
+                        .setTitleText("选择导出日期区间")
+                        .setSelection(androidx.core.util.Pair(startMsDefault, endMsDefault))
+                        .build()
+                    picker.addOnPositiveButtonClickListener { sel ->
+                        if (sel == null) return@addOnPositiveButtonClickListener
+                        val startUtcMs = sel.first ?: return@addOnPositiveButtonClickListener
+                        val endUtcMs = sel.second ?: return@addOnPositiveButtonClickListener
+                        val startDate = Instant.ofEpochMilli(startUtcMs).atZone(ZoneOffset.UTC).toLocalDate()
+                        val endDate = Instant.ofEpochMilli(endUtcMs).atZone(ZoneOffset.UTC).toLocalDate()
+
+                        val startMs = startDate.atStartOfDay(zone).toInstant().toEpochMilli()
+                        val endMs = endDate.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+                        if (endMs < startMs) {
+                            summaryView.text = "日期区间不正确"
+                            pendingExportRange = null
+                            setExporting(false)
+                            return@addOnPositiveButtonClickListener
+                        }
+
+                        pendingExportRange = Pair(startMs, endMs)
+                        val fn = "k2c_translations_${startDate}_${endDate}.csv"
+                        exportLauncher.launch(fn)
+                    }
+                    picker.addOnCancelListener {
+                        if (pendingExportRange == null) setExporting(false)
+                    }
+                    picker.addOnDismissListener {
+                        if (pendingExportRange == null) setExporting(false)
+                    }
+                    picker.show(parentFragmentManager, "export_csv_range")
+                } catch (t: Throwable) {
+                    summaryView.text = "导出失败：${t::class.java.simpleName}${t.message?.let { ": $it" } ?: ""}"
+                    pendingExportRange = null
+                    setExporting(false)
                 }
-                picker.show(parentFragmentManager, "export_csv_range")
             }
         }
 
@@ -173,5 +213,10 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
                 }
             }
         }
+    }
+
+    private fun setExporting(active: Boolean) {
+        exporting = active
+        exportButton.isEnabled = !active
     }
 }

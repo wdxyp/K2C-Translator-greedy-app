@@ -7,8 +7,8 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
-val appVersionCode = 13
-val appVersionName = "1.1.2"
+val appVersionCode = 14
+val appVersionName = "1.1.3"
 
 fun buildConfigString(value: String): String {
     val v = value.replace("\\", "\\\\").replace("\"", "\\\"")

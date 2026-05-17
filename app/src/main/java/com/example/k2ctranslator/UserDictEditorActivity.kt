@@ -12,6 +12,8 @@ import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.example.k2ctranslator.supabase.SupabaseAuth
+import com.example.k2ctranslator.supabase.SupabaseUserDictSync
 import com.example.k2ctranslator.translator.UserDictStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -128,7 +130,18 @@ class UserDictEditorActivity : AppCompatActivity() {
                 withContext(Dispatchers.IO) {
                     UserDictStorage.writeUserDict(this@UserDictEditorActivity, text)
                 }
-                setLoadingState(false, "已保存")
+                val uploadMsg = withContext(Dispatchers.IO) {
+                    if (!SupabaseAuth.isConfigured()) {
+                        "已保存（Supabase 未配置）"
+                    } else if (SupabaseAuth.ensureValidSession(this@UserDictEditorActivity) == null) {
+                        "已保存（未邮箱登录）"
+                    } else {
+                        val r = SupabaseUserDictSync.upload(this@UserDictEditorActivity, text)
+                        if (r.ok) "已保存并同步到云端" else "已保存（云端同步失败）"
+                    }
+                }
+                setResult(RESULT_OK)
+                setLoadingState(false, uploadMsg)
             } catch (t: Throwable) {
                 setLoadingState(false, "保存失败：${t.message ?: t::class.java.simpleName}")
             }
@@ -145,7 +158,18 @@ class UserDictEditorActivity : AppCompatActivity() {
                 }
                 contentView.setText(content)
                 contentView.post { ensureCursorVisible() }
-                setLoadingState(false, "已恢复默认")
+                val uploadMsg = withContext(Dispatchers.IO) {
+                    if (!SupabaseAuth.isConfigured()) {
+                        "已恢复默认（Supabase 未配置）"
+                    } else if (SupabaseAuth.ensureValidSession(this@UserDictEditorActivity) == null) {
+                        "已恢复默认（未邮箱登录）"
+                    } else {
+                        val r = SupabaseUserDictSync.upload(this@UserDictEditorActivity, content)
+                        if (r.ok) "已恢复默认并同步到云端" else "已恢复默认（云端同步失败）"
+                    }
+                }
+                setResult(RESULT_OK)
+                setLoadingState(false, uploadMsg)
             } catch (t: Throwable) {
                 setLoadingState(false, "恢复失败：${t.message ?: t::class.java.simpleName}")
             }

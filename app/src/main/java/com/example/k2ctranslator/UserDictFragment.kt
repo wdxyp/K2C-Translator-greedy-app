@@ -2,6 +2,7 @@ package com.example.k2ctranslator
 
 import android.net.Uri
 import android.os.Bundle
+import android.content.Intent
 import android.view.ViewTreeObserver
 import android.view.View
 import android.widget.Button
@@ -27,7 +28,6 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
     private lateinit var resetButton: Button
     private lateinit var importButton: Button
     private lateinit var downloadButton: Button
-    private var editable: Boolean = false
     private var lastSyncedSha: String? = null
     private var pendingExportText: String? = null
     private var globalLayoutListener: ViewTreeObserver.OnGlobalLayoutListener? = null
@@ -77,20 +77,24 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
         importButton = view.findViewById(R.id.dictImportButton)
         downloadButton = view.findViewById(R.id.dictDownloadButton)
 
-        editButton.setOnClickListener { toggleEdit(true) }
-        saveButton.setOnClickListener { onSave() }
+        contentView.keyListener = null
+        contentView.isCursorVisible = false
+        contentView.isLongClickable = false
+        saveButton.visibility = View.GONE
+
+        editButton.setOnClickListener { openEditor() }
         resetButton.setOnClickListener { onReset() }
         importButton.setOnClickListener { importLauncher.launch(arrayOf("text/markdown", "text/plain", "application/octet-stream")) }
         downloadButton.setOnClickListener { exportLatestDictAsFile() }
 
         contentView.doAfterTextChanged {
-            if (editable) ensureCursorVisible()
+            ensureCursorVisible()
         }
         contentView.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus && editable) ensureCursorVisible()
+            if (hasFocus) ensureCursorVisible()
         }
         globalLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
-            if (editable) ensureCursorVisible()
+            ensureCursorVisible()
         }.also { l ->
             view.viewTreeObserver.addOnGlobalLayoutListener(l)
         }
@@ -105,24 +109,12 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
                     UserDictStorage.readUserDict(requireContext())
                 }
                 contentView.setText(content)
-                toggleEdit(false)
                 lastSyncedSha = sha256Hex(content)
                 setLoadingState(false, "就绪")
                 syncFromCloud(force = false)
             } catch (t: Throwable) {
                 setLoadingState(false, "加载失败：${t::class.java.simpleName}${t.message?.let { ": $it" } ?: ""}")
             }
-        }
-    }
-
-    private fun toggleEdit(enabled: Boolean) {
-        editable = enabled
-        contentView.isEnabled = enabled
-        saveButton.isEnabled = enabled
-        editButton.isEnabled = !enabled
-        if (enabled) {
-            statusView.text = "编辑中…"
-            contentView.requestFocus()
         }
     }
 
@@ -133,17 +125,14 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
         downloadButton.isEnabled = !loading
         if (loading) {
             editButton.isEnabled = false
-            saveButton.isEnabled = false
-            contentView.isEnabled = false
         } else {
-            editButton.isEnabled = !editable
-            saveButton.isEnabled = editable
-            contentView.isEnabled = editable
+            editButton.isEnabled = true
         }
     }
 
     override fun onResume() {
         super.onResume()
+        reloadLocalDict()
         syncFromCloud(force = false)
     }
 
@@ -156,36 +145,6 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
         super.onDestroyView()
     }
 
-    private fun onSave() {
-        if (!editable) return
-        val text = contentView.text?.toString().orEmpty()
-        setLoadingState(true, "保存中…")
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    UserDictStorage.writeUserDict(requireContext(), text)
-                }
-                toggleEdit(false)
-                val savedSha = sha256Hex(text)
-                lastSyncedSha = savedSha
-
-                val uploadMsg = withContext(Dispatchers.IO) {
-                    if (!SupabaseAuth.isConfigured()) {
-                        "已保存（Supabase 未配置）"
-                    } else if (SupabaseAuth.ensureValidSession(requireContext()) == null) {
-                        "已保存（未邮箱登录）"
-                    } else {
-                        val r = SupabaseUserDictSync.upload(requireContext(), text)
-                        if (r.ok) "已保存并同步到云端" else "已保存（云端同步失败）"
-                    }
-                }
-                setLoadingState(false, uploadMsg)
-            } catch (t: Throwable) {
-                setLoadingState(false, "保存失败：${t::class.java.simpleName}${t.message?.let { ": $it" } ?: ""}")
-            }
-        }
-    }
-
     private fun onReset() {
         setLoadingState(true, "恢复默认…")
         viewLifecycleOwner.lifecycleScope.launch {
@@ -195,7 +154,6 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
                     UserDictStorage.readUserDict(requireContext())
                 }
                 contentView.setText(content)
-                toggleEdit(false)
                 lastSyncedSha = sha256Hex(content)
                 val uploadMsg = withContext(Dispatchers.IO) {
                     if (!SupabaseAuth.isConfigured()) {
@@ -214,8 +172,29 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
         }
     }
 
+    private fun openEditor() {
+        val i = Intent(requireContext(), UserDictEditorActivity::class.java)
+        startActivity(i)
+    }
+
+    private fun reloadLocalDict() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val content = withContext(Dispatchers.IO) {
+                    if (!UserDictStorage.userDictFile(requireContext()).exists()) {
+                        UserDictStorage.resetToDefault(requireContext())
+                    }
+                    UserDictStorage.readUserDict(requireContext())
+                }
+                contentView.setText(content)
+                lastSyncedSha = sha256Hex(content)
+                setLoadingState(false, "就绪")
+            } catch (_: Throwable) {
+            }
+        }
+    }
+
     private fun syncFromCloud(force: Boolean) {
-        if (editable) return
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val (cloudContent, r) = withContext(Dispatchers.IO) { SupabaseUserDictSync.download(requireContext()) }
@@ -234,7 +213,6 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
                     UserDictStorage.writeUserDict(requireContext(), cloudContent)
                 }
                 contentView.setText(cloudContent)
-                toggleEdit(false)
                 lastSyncedSha = cloudSha
                 setLoadingState(false, "已从云端同步")
             } catch (_: Throwable) {
@@ -248,7 +226,6 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
             val text = withContext(Dispatchers.IO) { readUtf8(requireContext().contentResolver.openInputStream(uri)) }
             withContext(Dispatchers.IO) { UserDictStorage.writeUserDict(requireContext(), text) }
             contentView.setText(text)
-            toggleEdit(false)
             lastSyncedSha = sha256Hex(text)
 
             val uploadMsg = withContext(Dispatchers.IO) {
@@ -300,7 +277,6 @@ class UserDictFragment : Fragment(R.layout.fragment_user_dict) {
     }
 
     private fun exportLatestDictAsFile() {
-        if (editable) return
         setLoadingState(true, "准备导出…")
         viewLifecycleOwner.lifecycleScope.launch {
             val (cloudContent, r) = withContext(Dispatchers.IO) { SupabaseUserDictSync.download(requireContext()) }

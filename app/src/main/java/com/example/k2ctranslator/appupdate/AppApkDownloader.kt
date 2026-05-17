@@ -15,6 +15,10 @@ object AppApkDownloader {
         val u = url.trim()
         if (u.isBlank()) return ApkDownloadResult(false, "下载地址为空")
 
+        context.cacheDir.listFiles()
+            ?.filter { it.isFile && it.name.startsWith("app_update_") && it.name.endsWith(".apk") }
+            ?.forEach { it.delete() }
+
         val safeV = versionName.trim().ifBlank { versionCode.toString() }
             .replace(Regex("""[^0-9A-Za-z._-]"""), "_")
         val out = File(context.cacheDir, "app_update_${versionCode}_${safeV}_${System.currentTimeMillis()}.apk")

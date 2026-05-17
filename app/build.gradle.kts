@@ -1,11 +1,11 @@
-plugins {
-    alias(libs.plugins.android.application)
-}
-
-import java.util.Properties
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Properties
+
+plugins {
+    alias(libs.plugins.android.application)
+}
 
 val appVersionCode = 13
 val appVersionName = "1.1.2"

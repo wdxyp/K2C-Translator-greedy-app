@@ -108,8 +108,16 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (!SupabaseAuth.isConfigured()) return
-        if (SupabaseAuth.ensureValidSession(this) == null) return
         lifecycleScope.launch {
+            val session =
+                withContext(Dispatchers.IO) {
+                    try {
+                        SupabaseAuth.ensureValidSession(this@MainActivity)
+                    } catch (_: Throwable) {
+                        null
+                    }
+                }
+            if (session == null) return@launch
             withContext(Dispatchers.IO) {
                 try {
                     SupabaseLogSync.sync(this@MainActivity)

@@ -7,8 +7,8 @@ import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-val appVersionCode = 9
-val appVersionName = "1.0.8"
+val appVersionCode = 10
+val appVersionName = "1.0.9"
 
 fun buildConfigString(value: String): String {
     val v = value.replace("\\", "\\\\").replace("\"", "\\\"")

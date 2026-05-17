@@ -69,13 +69,19 @@ class StatsFragment : Fragment(R.layout.fragment_stats) {
                 summaryView.text = "Supabase 未配置"
                 return@setOnClickListener
             }
-            if (SupabaseAuth.ensureValidSession(requireContext()) == null) {
-                summaryView.text = "请先邮箱登录"
-                return@setOnClickListener
-            }
-
             viewLifecycleOwner.lifecycleScope.launch {
                 summaryView.text = "同步中…"
+                val session = withContext(Dispatchers.IO) {
+                    try {
+                        SupabaseAuth.ensureValidSession(requireContext())
+                    } catch (_: Throwable) {
+                        null
+                    }
+                }
+                if (session == null) {
+                    summaryView.text = "请先邮箱登录"
+                    return@launch
+                }
                 val r = withContext(Dispatchers.IO) { SupabaseLogSync.sync(requireContext()) }
                 summaryView.text = if (r.ok) "同步成功：${r.uploaded} 条" else r.message
 
